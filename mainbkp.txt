@@ -1,0 +1,125 @@
+import { useRef, useState, useEffect } from "react";
+import { toPng } from "html-to-image";
+
+const keywords = ["function", "var", "if", "else"];
+const variables = /\b[a-zA-Z_][a-zA-Z0-9_]*\b/g;
+const comments = /\/\/.*|\/\*[\s\S]*?\*\//g;
+
+const Main = () => {
+	const [langServer, setLangServer] = useState(null);
+	const [code, setCode] = useState("");
+	const inputRef = useRef(null);
+
+	let highlightedCode = code;
+
+	useEffect(() => {
+		console.log(langServer);
+	}, [langServer]);
+
+	const toImage = useRef(null);
+
+	const onSaveClick = () => {
+		if (code === "") {
+			return;
+		}
+
+		toPng(toImage.current, { cacheBust: true })
+			.then((dataUrl) => {
+				const link = document.createElement("a");
+				link.download = "code image.png";
+				link.href = dataUrl;
+				link.click();
+			})
+			.catch((err) => {
+				console.log(err);
+			});
+	};
+
+	useEffect(() => {
+		// Reset height - important to shrink on delete
+		inputRef.current.style.height = "inherit";
+		// Set height
+		inputRef.current.style.height = `${inputRef.current.scrollHeight}px`;
+	}, [code]);
+
+	highlightedCode = highlightedCode.replace(
+		comments,
+		(match) => `<span class="comment">${match}</span>`
+	);
+	highlightedCode = highlightedCode.replace(
+		keywords,
+		(match) => `<span class="keyword">${match}</span>`
+	);
+	highlightedCode = highlightedCode.replace(
+		variables,
+		(match) => `<span class="variable">${match}</span>`
+	);
+
+	return (
+		<main className="container mx-auto my-8 space-y-8">
+			<section className="flex justify-between flex-col gap-4 sm:flex-row p-4 lg:p-0">
+				<select
+					defaultValue={"default"}
+					onChange={(e) => {
+						setLangServer(() => e.target.value);
+					}}
+					className="text-slate-900 outline-none px-4 py-2 rounded appearance-none"
+				>
+					<option
+						value={"default"}
+						disabled
+					>
+						Choose Language Server
+					</option>
+					<option value="Python">Python</option>
+					<option value="JavaScript">JavaScript</option>
+					<option value="HTML">HTML</option>
+				</select>
+				<button
+					onClick={onSaveClick}
+					className={`px-4 py-2 rounded select-none ${
+						code === "" ? "bg-slate-600 cursor-not-allowed" : "bg-blue-600"
+					}`}
+				>
+					Save Image
+				</button>
+			</section>
+
+			<section className="text-slate-900 flex gap-4 flex-col p-4 lg:p-0 lg:flex-row">
+				<textarea
+					tabIndex={0}
+					placeholder="Paste your code here..."
+					onChange={(e) => {
+						setCode(() => e.target.value);
+					}}
+					className="w-full appearance-none resize-none bg-slate-100 rounded outline-none p-8"
+				></textarea>
+				<div
+					ref={toImage}
+					className="w-full rounded bg-gradient-to-tr from-blue-100 via-blue-50 to-blue-100 p-6"
+				>
+					<div className="bg-black rounded w-full shadow-lg">
+						<div className="[&>*]:w-3 [&>*]:h-3 [&>*]:rounded-full flex gap-2 p-6 rounded">
+							<div className="bg-red-500"></div>
+							<div className="bg-amber-500"></div>
+							<div className="bg-green-500"></div>
+						</div>
+						<textarea
+							placeholder="code preview"
+							ref={inputRef}
+							disabled
+							defaultValue={code}
+							className="python resize-none selection:bg-transparent appearance-none bg-black text-slate-100 w-full rounded min-h-[20rem outline-none px-8 cursor-context-menu"
+						/>
+						{/* <pre className="text-white px-8 pb-6"> */}
+						{/* <code>{code}</code> */}
+						{/* <code dangerouslySetInnerHTML={{ __html: highlightedCode }} /> */}
+						{/* </pre> */}
+					</div>
+				</div>
+			</section>
+		</main>
+	);
+};
+
+export default Main;
